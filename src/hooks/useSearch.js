@@ -2,13 +2,13 @@ import { useMemo } from 'react'
 import { COUNTRIES } from '../data/attractions'
 import useTripStore from '../store/useTripStore'
 
-export function useSearch(searchQuery, countryFilter) {
+export function useSearch(searchQuery, countryFilter, isAdmin = false) {
   const customAttractions = useTripStore(s => s.customAttractions)
 
   return useMemo(() => {
     const q = searchQuery.trim().toLowerCase()
 
-    // Build a virtual "My Places" country from custom attractions
+    // Build a virtual "My Places" country from user-added attractions
     const customCountry = customAttractions.length > 0 ? {
       code: 'CUSTOM',
       name: 'My Places',
@@ -25,8 +25,9 @@ export function useSearch(searchQuery, countryFilter) {
       }].filter(c => c.attractions.length > 0),
     } : null
 
+    // Only include built-in COUNTRIES for the admin account
     const base = [
-      ...COUNTRIES,
+      ...(isAdmin ? COUNTRIES : []),
       ...(customCountry ? [customCountry] : []),
     ]
 
@@ -47,5 +48,5 @@ export function useSearch(searchQuery, countryFilter) {
           .filter(city => city.attractions.length > 0),
       }))
       .filter(country => country.cities.length > 0)
-  }, [searchQuery, countryFilter, customAttractions])
+  }, [searchQuery, countryFilter, customAttractions, isAdmin])
 }

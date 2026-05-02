@@ -3,10 +3,12 @@ import { SearchBar } from '../sidebar/SearchBar'
 import { CountryAccordion } from '../sidebar/CountryAccordion'
 import { SettingsModal } from '../settings/SettingsModal'
 import { useSearch } from '../../hooks/useSearch'
+import { useIsAdmin } from '../../hooks/useIsAdmin'
 import useTripStore from '../../store/useTripStore'
 
 export function LeftSidebar() {
   const [showSettings, setShowSettings] = useState(false)
+  const isAdmin = useIsAdmin()
 
   const {
     searchQuery, setSearchQuery,
@@ -16,7 +18,7 @@ export function LeftSidebar() {
     openAddModal,
   } = useTripStore()
 
-  const filtered = useSearch(searchQuery, countryFilter)
+  const filtered = useSearch(searchQuery, countryFilter, isAdmin)
 
   // Scroll sidebar to the selected attraction card when a marker is clicked
   useEffect(() => {

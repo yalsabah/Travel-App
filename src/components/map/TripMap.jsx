@@ -4,11 +4,13 @@ import { AttractionMarker } from './AttractionMarker'
 import { FlyToController } from './FlyToController'
 import { RouteLine } from './RouteLine'
 import { MapSizeController } from './MapSizeController'
+import { useIsAdmin } from '../../hooks/useIsAdmin'
 import useTripStore from '../../store/useTripStore'
 
 export function TripMap({ leftWidth, rightWidth }) {
   const isDark            = useTripStore(s => s.isDark)
   const customAttractions = useTripStore(s => s.customAttractions)
+  const isAdmin           = useIsAdmin()
 
   const tileUrl = isDark
     ? 'https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png'
@@ -35,8 +37,8 @@ export function TripMap({ leftWidth, rightWidth }) {
         detectRetina={true}
       />
 
-      {/* Built-in attractions */}
-      {COUNTRIES.flatMap(country =>
+      {/* Built-in attractions — admin only */}
+      {isAdmin && COUNTRIES.flatMap(country =>
         country.cities.flatMap(city =>
           city.attractions.map(attraction => (
             <AttractionMarker key={attraction.id} attraction={attraction} />
