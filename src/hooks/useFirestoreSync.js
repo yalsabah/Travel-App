@@ -2,31 +2,52 @@ import { useEffect, useRef } from 'react'
 import { doc, setDoc, getDoc } from 'firebase/firestore'
 import { db } from '../firebase'
 import useTripStore from '../store/useTripStore'
+import { TRIP_CONFIG } from '../data/tripConfig'
 
-// Syncs itinerary, customAttractions, tripDuration, isDark to Firestore
-// under users/{uid}/tripData. Loads from Firestore when user signs in.
+// Default state for a brand-new user (empty slate)
+const EMPTY_STATE = {
+  itinerary:         {},
+  customAttractions: [],
+  tripDuration:      TRIP_CONFIG.defaultDuration,
+}
+
 export function useFirestoreSync(user) {
   const store = useTripStore()
   const initialLoadDone = useRef(false)
   const syncTimeoutRef  = useRef(null)
+  const lastUidRef      = useRef(null)
 
-  // Load from Firestore when user first signs in
+  // ── Load (or reset) whenever the logged-in user changes ──
   useEffect(() => {
-    if (!user) { initialLoadDone.current = false; return }
+    // User signed out — reset to empty defaults
+    if (!user) {
+      useTripStore.setState(EMPTY_STATE)
+      initialLoadDone.current = false
+      lastUidRef.current = null
+      return
+    }
+
+    // Same user still logged in — don't re-load
+    if (lastUidRef.current === user.uid) return
+    lastUidRef.current = user.uid
+    initialLoadDone.current = false
 
     async function load() {
+      // Always wipe previous user's data from the store first
+      useTripStore.setState(EMPTY_STATE)
+
       try {
         const snap = await getDoc(doc(db, 'users', user.uid, 'data', 'tripData'))
         if (snap.exists()) {
           const data = snap.data()
-          // Hydrate store — only fields we sync
           useTripStore.setState({
-            ...(data.itinerary          != null && { itinerary: data.itinerary }),
-            ...(data.tripDuration       != null && { tripDuration: data.tripDuration }),
-            ...(data.customAttractions  != null && { customAttractions: data.customAttractions }),
-            ...(data.isDark             != null && { isDark: data.isDark }),
+            ...(data.itinerary          != null && { itinerary:         data.itinerary }),
+            ...(data.tripDuration       != null && { tripDuration:       data.tripDuration }),
+            ...(data.customAttractions  != null && { customAttractions:  data.customAttractions }),
+            ...(data.isDark             != null && { isDark:             data.isDark }),
           })
         }
+        // No Firestore doc = new user → stays on empty defaults above
       } catch (e) {
         console.warn('Firestore load failed:', e)
       } finally {
@@ -36,7 +57,7 @@ export function useFirestoreSync(user) {
     load()
   }, [user])
 
-  // Debounced write on any relevant state change
+  // ── Debounced write on any store change ──
   useEffect(() => {
     if (!user || !initialLoadDone.current) return
 
